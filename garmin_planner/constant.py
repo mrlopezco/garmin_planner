@@ -9,6 +9,7 @@ DATE_FORMAT = "%Y-%m-%d"
 # Workout data
 class SportType(Enum):
     RUNNING = {"sportTypeId": 1, "sportTypeKey": "running", "displayOrder": 1}
+    CYCLING = {"sportTypeId": 2, "sportTypeKey": "cycling", "displayOrder": 2}
     OTHER = {"sportTypeId": 3, "sportTypeKey": "other", "displayOrder": 11}
 
     def to_dict(self):

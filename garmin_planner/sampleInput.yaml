@@ -1,16 +1,44 @@
 settings:
   deleteSameNameWorkout: true
 definitions:
-  Zone2: 120-140
+  Zone1: 90-112
+  Zone2: 112-148
+  Zone3: 148-166
+  Zone4: 166-184
+  Zone5: 184-220
+
 workouts:
-  - sportType: other
-    name: other_workout
+  - sportType: cycling
+    name: other_workout_cycling
     steps:
-      - warmup: 15min @H(z2)
-      - interval: 35min @H(z2) # description: Cycle
-      - interval: 4000m @H(z2) # description: Run
-      - cooldown: 10min
+      - warmup:
+          value: 15min @H(z2)
+          description: 'Como esta la descripcion'
+      - interval:
+          value: 35min @H(z2)
+          description: 'Interval description'
+      - interval:
+          value: 4000m @H(z2)
+      - cooldown:
+          value: 10min
+
+  - sportType: cycling
+    name: 25-05-19_cycling_50min
+    steps:
+      - warmup:
+          value: 15min @H(z2)
+          description: '15-minute warm-up. 5x3 minutes with 1-minute rest intervals. #1 End at low Zone 3, #2 End at middle Zone 3, #3 End at upper Zone 3, #4 End at lower Zone 4, #5 Build to Zone 4 in first 45 seconds and hold. 15-minute cooldown.'
+      - repeat(5):
+        - interval:
+            value: 35min @H(z4)
+            description: 'Interval description'
+      - cooldown:
+          value: 15min @H(z1)
 schedulePlan:
-  start_from: 2025-04-20
+  start_from: 2025-05-19
   workouts:
-    - other_workout
+    - other_workout_cycling
+    - rest
+    - 25-05-19_cycling_50min
+
+

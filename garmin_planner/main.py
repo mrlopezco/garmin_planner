@@ -48,40 +48,45 @@ def createWorkoutList(steps: list, stepCount: list):
 
 def createWorkoutStep(step: dict, stepCount: list):
     stepType = None
-    for stepName in step:
-        stepDetail = step[stepName]
-        parsedStep, numIteration = parse_bracket(stepName)
-        match parsedStep:
-            case "run":
-                stepType = StepType.INTERVAL
-            case "warmup":
-                stepType = StepType.WARMUP
-            case "cooldown":
-                stepType = StepType.COOLDOWN
-            case "recovery":
-                stepType = StepType.RECOVERY
-            case "interval":
-                stepType = StepType.INTERVAL
-            case "repeat":
-                stepType = StepType.REPEAT
-                stepCount[0] += 1
-                order = stepCount[0]
-                workoutSteps = createWorkoutList(stepDetail, stepCount)
-                return RepeatStep(
-                    stepId=order,
-                    stepOrder=order,
-                    workoutSteps=workoutSteps,
-                    numberOfIterations=int(numIteration),
-                )
-            case _:
-                logger.error("default in workout step")
-                return None
-        parsedStepDetailDict = parse_stepdetail(stepDetail)
-        stepCount[0] += 1
-        order = stepCount[0]
-        return WorkoutStep(
-            stepId=order, stepOrder=order, stepType=stepType, **parsedStepDetailDict
-        )
+    description = step.get("description")  # Extract description
+    stepDetail = step["value"]  # Extract step value
+    parsedStep, numIteration = parse_bracket(step["type"])
+    match parsedStep:
+        case "run":
+            stepType = StepType.INTERVAL
+        case "warmup":
+            stepType = StepType.WARMUP
+        case "cooldown":
+            stepType = StepType.COOLDOWN
+        case "recovery":
+            stepType = StepType.RECOVERY
+        case "interval":
+            stepType = StepType.INTERVAL
+        case "repeat":
+            stepType = StepType.REPEAT
+            stepCount[0] += 1
+            order = stepCount[0]
+            workoutSteps = createWorkoutList(stepDetail, stepCount)
+            return RepeatStep(
+                stepId=order,
+                stepOrder=order,
+                workoutSteps=workoutSteps,
+                numberOfIterations=int(numIteration),
+            )
+        case _:
+            logger.error("default in workout step")
+            return None
+
+    parsedStepDetailDict = parse_stepdetail(stepDetail)
+    stepCount[0] += 1
+    order = stepCount[0]
+    return WorkoutStep(
+        stepId=order,
+        stepOrder=order,
+        stepType=stepType,
+        description=description,  # Add description to WorkoutStep
+        **parsedStepDetailDict,
+    )
 
 
 def createWorkoutJson(

@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Module",
+            "type": "debugpy",  // Use "python" instead of "debugpy"
+            "request": "launch",
+            "module": "garmin_planner",
+            "args": ["sampleInput.yaml"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        }
+    ]
+}

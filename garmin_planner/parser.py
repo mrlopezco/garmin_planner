@@ -21,7 +21,21 @@ def parseYaml(filename: str):
                     sportType = workout.get(
                         "sportType", "running"
                     )  # Default to running
-                    steps = workout["steps"]
+                    steps = []
+                    for step in workout["steps"]:
+                        for stepType, stepDetails in step.items():
+                            if isinstance(stepDetails, dict):
+                                value = stepDetails.get("value")
+                                description = stepDetails.get("description")
+                                steps.append(
+                                    {
+                                        "type": stepType,
+                                        "value": value,
+                                        "description": description,
+                                    }
+                                )
+                            else:
+                                steps.append({"type": stepType, "value": stepDetails})
                     workouts[name] = {"sportType": sportType, "steps": steps}
                 data["workouts"] = workouts
         except yaml.YAMLError as exc:

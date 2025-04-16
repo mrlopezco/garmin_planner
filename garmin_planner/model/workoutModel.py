@@ -17,15 +17,16 @@ class WorkoutStep:
     endCondition: ConditionType
     endConditionValue: int
     preferredEndConditionUnit: Optional[DistanceUnit] = (
-        None  # this when end con is distance
+        None  # This when end con is distance
     )
     type: str = "ExecutableStepDTO"
     targetType: Optional[TargetType] = None
-    targetValueOne: Optional[float] = None  # when its custom
-    targetValueTwo: Optional[float] = None  # when its custom
-    zoneNumber: Optional[int] = None  # This needed when target = zone based
+    targetValueOne: Optional[float] = None  # When it's custom
+    targetValueTwo: Optional[float] = None  # When it's custom
+    zoneNumber: Optional[int] = None  # This is needed when target = zone-based
     targetValueUnit: Optional[str] = None
     stepAudioNote: Optional[str] = None
+    description: Optional[str] = None  # Add description field
 
 
 @dataclass
