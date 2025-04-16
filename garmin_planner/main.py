@@ -1,6 +1,11 @@
 from garmin_planner.client import Client
 from garmin_planner.__init__ import logger
-from garmin_planner.model.workoutModel import WorkoutModel, WorkoutSegment, WorkoutStep, RepeatStep
+from garmin_planner.model.workoutModel import (
+    WorkoutModel,
+    WorkoutSegment,
+    WorkoutStep,
+    RepeatStep,
+)
 from garmin_planner.constant import *
 from garmin_planner.parser import *
 import re
@@ -12,20 +17,25 @@ import os
 
 __version__ = "0.1.0"
 
+
 def replace_variables(data, definitionsDict: dict):
     if isinstance(data, str):
-        return re.sub(r'\$(\w+)', lambda m: definitionsDict.get(m.group(1), m.group(0)), data)
+        return re.sub(
+            r"\$(\w+)", lambda m: definitionsDict.get(m.group(1), m.group(0)), data
+        )
     elif isinstance(data, dict):
         return {k: replace_variables(v, definitionsDict) for k, v in data.items()}
     elif isinstance(data, list):
         return [replace_variables(item, definitionsDict) for item in data]
-    return data  
+    return data
+
 
 # Serialize to JSON
 def serialize(obj):
     if isinstance(obj, Enum):
         return obj.to_dict()
     return obj.__dict__
+
 
 def createWorkoutList(steps: list, stepCount: list):
     workoutSteps = []
@@ -35,6 +45,7 @@ def createWorkoutList(steps: list, stepCount: list):
             workoutSteps.append(workoutStep)
     return workoutSteps
 
+
 def createWorkoutStep(step: dict, stepCount: list):
     stepType = None
     for stepName in step:
@@ -42,44 +53,46 @@ def createWorkoutStep(step: dict, stepCount: list):
         parsedStep, numIteration = parse_bracket(stepName)
         match parsedStep:
             case "run":
-                stepType = StepType.WARMUP
+                stepType = StepType.INTERVAL
             case "warmup":
                 stepType = StepType.WARMUP
             case "cooldown":
                 stepType = StepType.COOLDOWN
             case "recovery":
                 stepType = StepType.RECOVERY
+            case "interval":
+                stepType = StepType.INTERVAL
             case "repeat":
                 stepType = StepType.REPEAT
                 stepCount[0] += 1
                 order = stepCount[0]
                 workoutSteps = createWorkoutList(stepDetail, stepCount)
                 return RepeatStep(
-                    stepId=order, stepOrder=order, 
+                    stepId=order,
+                    stepOrder=order,
                     workoutSteps=workoutSteps,
-                    numberOfIterations=int(numIteration))
+                    numberOfIterations=int(numIteration),
+                )
             case _:
                 logger.error("default in workout step")
                 return None
-
         parsedStepDetailDict = parse_stepdetail(stepDetail)
         stepCount[0] += 1
         order = stepCount[0]
-    return WorkoutStep(stepId=order, stepOrder=order, stepType=stepType, **parsedStepDetailDict)
+        return WorkoutStep(
+            stepId=order, stepOrder=order, stepType=stepType, **parsedStepDetailDict
+        )
 
 
-def createWorkoutJson(workoutName: str, steps: list):
+def createWorkoutJson(
+    workoutName: str, steps: list, sport_type: SportType = SportType.RUNNING
+):
     stepCount = [0]
-    sport_type = SportType.RUNNING
-    # distance_unit = DistanceUnit.KILOMETER
 
     workoutSteps = createWorkoutList(steps, stepCount)
 
-    # Create other steps and segments similarly, then create the workout model
     workout_segment = WorkoutSegment(
-        segmentOrder=1,
-        sportType=sport_type,
-        workoutSteps=workoutSteps
+        segmentOrder=1, sportType=sport_type, workoutSteps=workoutSteps
     )
 
     workout_model = WorkoutModel(
@@ -87,41 +100,52 @@ def createWorkoutJson(workoutName: str, steps: list):
         sportType=sport_type,
         subSportType=None,
         workoutSegments=[workout_segment],
-        estimatedDistanceUnit=None,
+        estimatedDistanceUnit=DistanceUnit.NONE,
         avgTrainingSpeed=None,
-        estimatedDurationInSecs=None,
-        estimatedDistanceInMeters=None,
-        estimateType=None
+        estimatedDurationInSecs=0,
+        estimatedDistanceInMeters=0,
+        estimateType=None,
+        isWheelchair=False,
     )
 
     return json.dumps(workout_model, default=serialize)
+
 
 def importWorkouts(workouts: dict, toDeletePrevious: bool, conn: Client):
     # delete previous workout with the same workout name
     allWorkouts = []
     if toDeletePrevious:
-        allWorkouts = conn.getAllWorkouts() 
+        allWorkouts = conn.getAllWorkouts()
 
     for name in workouts:
-        if toDeletePrevious and (name in [wo['workoutName'] for wo in allWorkouts]):
-            filtered = [wo for wo in allWorkouts if wo['workoutName'] == name]
+        if toDeletePrevious and (name in [wo["workoutName"] for wo in allWorkouts]):
+            filtered = [wo for wo in allWorkouts if wo["workoutName"] == name]
             for toDelete in filtered:
                 conn.deleteWorkout(toDelete)
 
-        steps = workouts[name]
-        jsonData = createWorkoutJson(name, steps)
+        workout = workouts[name]
+        sportType = workout["sportType"]
+        steps = workout["steps"]
+        sportTypeEnum = SportType[sportType.upper()]  # Convert to SportType enum
+        jsonData = createWorkoutJson(name, steps, sportTypeEnum)
+        print(jsonData)
         conn.importWorkout(jsonData)
+
 
 def scheduleWorkouts(startfrom: datetime, workouts: dict, conn: Client):
     # Check valid date
     isValidDate = isinstance(startfrom, datetime.date)
-    if (not isValidDate):
-        logger.error(f"""Invalid date {startfrom} format, example of proper date: 2024-10-06 """)
+    if not isValidDate:
+        logger.error(
+            f"""Invalid date {startfrom} format, example of proper date: 2024-10-06 """
+        )
         return False
 
     # Get all workouts plan from garmin acc
     allWorkouts = conn.getAllWorkouts()
-    workoutMap = {value['workoutName']: value['workoutId'] for _, value in enumerate(allWorkouts)}
+    workoutMap = {
+        value["workoutName"]: value["workoutId"] for _, value in enumerate(allWorkouts)
+    }
     logger.debug(f"""Workouts on garmin: {workoutMap}""")
 
     toScheduleDate = startfrom
@@ -130,21 +154,24 @@ def scheduleWorkouts(startfrom: datetime, workouts: dict, conn: Client):
     for toScheduleWorkout in workouts:
         currentDate = toScheduleDate
         toScheduleDate += datetime.timedelta(days=1)
-        if (toScheduleWorkout not in workoutMap):
+        if toScheduleWorkout not in workoutMap:
             continue
 
         workoutId = workoutMap[toScheduleWorkout]
         dateJson = {"date": currentDate.strftime(DATE_FORMAT)}
         success = conn.scheduleWorkout(workoutId, dateJson)
-        if (success):
-            logger.info(f"""Scheduled workout {toScheduleWorkout} on date {currentDate}""")
+        if success:
+            logger.info(
+                f"""Scheduled workout {toScheduleWorkout} on date {currentDate}"""
+            )
         else:
             logger.error("Something went wrong during schedulling")
+
 
 def main():
     logger.info(f"""Running Garmin Planner {__version__}""")
     argparser = argparse.ArgumentParser(description="Garmin Planner")
-    argparser.add_argument('file_name', type=str, help='Input YAML file name')
+    argparser.add_argument("file_name", type=str, help="Input YAML file name")
     args = argparser.parse_args()
     file_name = args.file_name
 
@@ -168,31 +195,35 @@ def main():
         logger.error("Missing 'email' or 'password' in YAML input.")
         sys.exit("Exiting: 'email' or 'password' not found.")
 
-    email = secrets['email']
-    password = secrets['password']
-    garminCon = Client(email,password)
+    email = secrets["email"]
+    password = secrets["password"]
+    garminCon = Client(email, password)
 
     # parse input yaml file
     data = parseYaml(file_path)
 
     # settings
     if "settings" in data:
-        if "deleteSameNameWorkout" in data['settings']:
-            settings['deleteSameNameWorkout'] = data['settings']['deleteSameNameWorkout']
+        if "deleteSameNameWorkout" in data["settings"]:
+            settings["deleteSameNameWorkout"] = data["settings"][
+                "deleteSameNameWorkout"
+            ]
 
     # replace definitions
     if "definitions" in data:
-        definitionsDict = data['definitions']
+        definitionsDict = data["definitions"]
         data = replace_variables(data, definitionsDict)
     if "workouts" in data:
-        workouts = data['workouts']
-        importWorkouts(workouts=workouts, 
-                       toDeletePrevious=settings['deleteSameNameWorkout'], 
-                       conn=garminCon)
+        workouts = data["workouts"]
+        importWorkouts(
+            workouts=workouts,
+            toDeletePrevious=settings["deleteSameNameWorkout"],
+            conn=garminCon,
+        )
     if "schedulePlan" in data:
-        schedulePlan = data['schedulePlan']
-        startDate = schedulePlan['start_from']
-        workouts = schedulePlan['workouts']
+        schedulePlan = data["schedulePlan"]
+        startDate = schedulePlan["start_from"]
+        workouts = schedulePlan["workouts"]
         scheduleWorkouts(startDate, workouts, garminCon)
 
     logger.info("Finished processing yaml file")

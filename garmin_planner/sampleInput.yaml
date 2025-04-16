@@ -1,20 +1,16 @@
 settings:
   deleteSameNameWorkout: true
-
 definitions:
-  GA: 6:35-7:00
-
-# define workouts here
+  Zone2: 120-140
 workouts:
-
-  ga_6k:
-    - warmup: 1000m @H(z2)
-    - run: 4000m @P($GA)
-    - cooldown: 1000m @H(z2)
-
-# schedule workouts
+  - sportType: other
+    name: other_workout
+    steps:
+      - warmup: 15min @H(z2)
+      - interval: 35min @H(z2) # description: Cycle
+      - interval: 4000m @H(z2) # description: Run
+      - cooldown: 10min
 schedulePlan:
   start_from: 2025-04-20
-  workouts: 
-    # week 1
-    - ga_6k
+  workouts:
+    - other_workout
